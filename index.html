@@ -17,7 +17,7 @@ canvas{display:block;width:100vw;height:100vh;width:100dvw;height:100dvh}
 #s.h{opacity:0;pointer-events:none}
 </style>
 </head><body><canvas id="c"></canvas>
-<div id="s"><h1>LIQUID AURORA</h1><p>touch to pull the light<br>tilt your phone<br>double-tap to shift<br>wait for the moment</p><button id="go">ENTER</button></div>
+<div id="s"><h1>LIQUID AURORA</h1><p>touch to pull the light<br>tap the fireflies<br>tilt your phone<br>double-tap to shift<br>wait for the moment</p><button id="go">ENTER</button></div>
 <script>
 const c=document.getElementById('c'),gl=c.getContext('webgl',{antialias:false});
 if(!gl){document.body.innerHTML='<p style="color:#fff;padding:40px">WebGL not supported</p>';throw 0}
@@ -99,7 +99,7 @@ function iau(){
     no.connect(nf);nf.connect(ng);ng.connect(mg);no.start();
   }catch(e){console.error('Audio init failed:',e);}
 }
-function pluck(x,y){if(!ac)return;const t=ac.currentTime,p=220*Math.pow(2,y*1.2);const o=ac.createOscillator();o.type='triangle';o.frequency.value=p;const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.3,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+1.2);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=1500+Math.abs(x)*2000;o.connect(f);f.connect(g);g.connect(mg);o.start(t);o.stop(t+1.3);}
+function pluck(x,y){if(!ac)return;if(window._skipPluck)return;const t=ac.currentTime,p=110*Math.pow(2,y*1.2);const o=ac.createOscillator();o.type='sine';o.frequency.value=p;const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.08,t+.05);g.gain.exponentialRampToValueAtTime(.001,t+1.5);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=600+Math.abs(x)*800;o.connect(f);f.connect(g);g.connect(mg);o.start(t);o.stop(t+1.6);}
 function shift(){if(!ac)return;const t=ac.currentTime,o=ac.createOscillator();o.type='sine';o.frequency.setValueAtTime(800,t);o.frequency.exponentialRampToValueAtTime(100,t+1.5);const g=ac.createGain();g.gain.setValueAtTime(.4,t);g.gain.exponentialRampToValueAtTime(.001,t+1.5);o.connect(g);g.connect(mg);o.start(t);o.stop(t+1.5);}
 function sing(){if(!ac)return;const t=ac.currentTime,o=ac.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(55,t);o.frequency.exponentialRampToValueAtTime(880,t+4);const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.25,t+3.5);g.gain.linearRampToValueAtTime(0,t+4.2);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(200,t);f.frequency.exponentialRampToValueAtTime(6000,t+4);o.connect(f);f.connect(g);g.connect(mg);o.start(t);o.stop(t+4.3);
 setTimeout(()=>{const t2=ac.currentTime,b=ac.createOscillator();b.type='sine';b.frequency.setValueAtTime(80,t2);b.frequency.exponentialRampToValueAtTime(20,t2+2);const bg=ac.createGain();bg.gain.setValueAtTime(.6,t2);bg.gain.exponentialRampToValueAtTime(.001,t2+2);b.connect(bg);bg.connect(mg);b.start(t2);b.stop(t2+2);},3800);}
@@ -159,10 +159,12 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     for(let i=flies.length-1;i>=0;i--){
       const f=flies[i];
       const d=Math.hypot(f.x-tx,f.y-ty);
-      if(d<f.r+20){
+            if(d<f.r+20){
         burst(f.x,f.y,f.hue);
         ding(f.hue);
         flies.splice(i,1);
+        window._skipPluck=true;
+        setTimeout(()=>{window._skipPluck=false;},50);
         return;
       }
     }
