@@ -1,0 +1,116 @@
+<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<title>Liquid Aurora</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;overscroll-behavior:none;position:fixed;inset:0}
+canvas{display:block;width:100vw;height:100vh;width:100dvw;height:100dvh}
+#s{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:radial-gradient(circle,#0a0420,#000);color:#e8d5ff;font-family:-apple-system,sans-serif;z-index:10;transition:opacity .8s;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#s h1{font-weight:200;font-size:clamp(28px,8vw,48px);letter-spacing:.2em}
+#s p{font-weight:300;font-size:13px;opacity:.7;text-align:center;padding:0 30px;line-height:1.8}
+#s button{margin-top:20px;padding:16px 40px;border:1px solid #e8d5ff55;background:transparent;color:#e8d5ff;font-size:13px;letter-spacing:.2em;border-radius:40px;backdrop-filter:blur(10px)}
+#s.h{opacity:0;pointer-events:none}
+</style>
+</head><body><canvas id="c"></canvas>
+<div id="s"><h1>LIQUID AURORA</h1><p>touch to pull the light<br>tilt your phone<br>double-tap to shift<br>wait for the moment</p><button id="go">ENTER</button></div>
+<script>
+const c=document.getElementById('c'),gl=c.getContext('webgl',{antialias:false});
+if(!gl){document.body.innerHTML='<p style="color:#fff;padding:40px">WebGL not supported</p>';throw 0}
+const VS=`attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
+const FS=`precision highp float;uniform vec2 R;uniform float T;uniform vec3 P[5];uniform vec2 TL;uniform float PL;uniform float SG;uniform float FL;
+vec3 pal(float t,float i){i=mod(i,5.);vec3 a=vec3(.5),b=vec3(.5),c,d;
+if(i<1.){c=vec3(1.);d=vec3(.3,.2,.7);}
+else if(i<2.){c=vec3(1.,.7,.4);d=vec3(0.,.15,.2);}
+else if(i<3.){c=vec3(1.,1.,.5);d=vec3(.8,.9,.3);}
+else if(i<4.){c=vec3(2.,1.,0.);d=vec3(.5,.2,.25);}
+else{a=vec3(.8,.5,.4);b=vec3(.2,.4,.2);c=vec3(2.,1.,1.);d=vec3(0.,.25,.25);}
+return a+b*cos(6.283*(c*t+d));}
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);float a=h(i),b=h(i+vec2(1,0)),c=h(i+vec2(0,1)),d=h(i+vec2(1,1));vec2 u=f*f*(3.-2.*f);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
+float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p*=2.03;a*=.5;}return v;}
+void main(){vec2 uv=(gl_FragCoord.xy-.5*R)/min(R.x,R.y),uv0=uv;uv+=TL*.35;float s=smoothstep(0.,1.,SG);uv*=mix(1.,.15,s);
+float fd=0.;vec2 fl=vec2(0.);for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){vec2 d=uv-t.xy;float r=length(d);fd+=t.z*.08/(r*r+.03);fl+=-normalize(d+.0001)*t.z*.02/(r+.1);}}
+float tm=T*.15;vec2 q=uv*1.2+fl;q+=.3*vec2(fbm(q+tm),fbm(q-tm+5.));float nn=fbm(q*1.5+tm*.7)+fd;
+float bd=sin(nn*6.+T*.4+TL.x*3.)*.5+.5;float gw=pow(bd,2.5);
+vec3 co=mix(pal(nn+bd*.3,floor(PL)),pal(nn+bd*.3,floor(PL)+1.),fract(PL));co*=.6+gw*1.4;
+for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){float r=length(uv0-t.xy);co+=t.z*vec3(1.,.85,1.)*.04/(r*r+.002);}}
+co*=1.-dot(uv0,uv0)*.5;co*=mix(1.,.2,s);
+float rg=smoothstep(.02,0.,abs(length(uv0)-(.5-s*.5)))*s;co+=rg*vec3(1.,.9,1.2)*2.;
+co+=vec3(FL);co+=(h(gl_FragCoord.xy+T)-.5)*.03;gl_FragColor=vec4(co,1.);}`;
+function mk(t,s){const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);if(!gl.getShaderParameter(x,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(x));return x;}
+const pr=gl.createProgram();gl.attachShader(pr,mk(gl.VERTEX_SHADER,VS));gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);gl.useProgram(pr);
+const bf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const pL=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
+const uR=gl.getUniformLocation(pr,'R'),uT=gl.getUniformLocation(pr,'T'),uP=gl.getUniformLocation(pr,'P'),uTL=gl.getUniformLocation(pr,'TL'),uPL=gl.getUniformLocation(pr,'PL'),uSG=gl.getUniformLocation(pr,'SG'),uFL=gl.getUniformLocation(pr,'FL');
+const tc=[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];let tl=[0,0],tlT=[0,0],pal=0,palT=0,sg=0,fl=0,st=0,shake=0,la=null;
+function rz(){const d=Math.min(devicePixelRatio||1,2);c.width=innerWidth*d;c.height=innerHeight*d;gl.viewport(0,0,c.width,c.height);}
+addEventListener('resize',rz);rz();
+const at=new Map();
+function tp(t){const r=c.getBoundingClientRect(),m=Math.min(r.width,r.height);return[(t.clientX-r.left-r.width/2)/m,-(t.clientY-r.top-r.height/2)/m];}
+c.addEventListener('touchstart',e=>{e.preventDefault();for(const t of e.changedTouches){for(let i=0;i<5;i++){if(tc[i][2]<.01&&![...at.values()].includes(i)){at.set(t.identifier,i);const[x,y]=tp(t);tc[i]=[x,y,1];pluck(x,y);break;}}}},{passive:false});
+c.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches){const i=at.get(t.identifier);if(i!==undefined){const[x,y]=tp(t);tc[i][0]=x;tc[i][1]=y;if(ng)ng.gain.setTargetAtTime(.08,ac.currentTime,.2);}}},{passive:false});
+function rel(e){for(const t of e.changedTouches){const i=at.get(t.identifier);if(i!==undefined){tc[i][2]=0;at.delete(t.identifier);}}}
+c.addEventListener('touchend',rel);c.addEventListener('touchcancel',rel);
+let md=false;c.addEventListener('mousedown',e=>{md=true;const[x,y]=tp(e);tc[0]=[x,y,1];pluck(x,y);});
+c.addEventListener('mousemove',e=>{if(md){const[x,y]=tp(e);tc[0][0]=x;tc[0][1]=y;}});
+addEventListener('mouseup',()=>{md=false;tc[0][2]=0;});
+let lt=0;c.addEventListener('touchend',()=>{const n=performance.now();if(n-lt<300){dt();lt=0;}else lt=n;});
+c.addEventListener('dblclick',dt);
+function dt(){palT+=1;fl=1;shift();}
+function gyr(){if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')ago();}).catch(()=>{});else ago();if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function')DeviceMotionEvent.requestPermission().then(r=>{if(r==='granted')amo();}).catch(()=>{});else amo();}
+function ago(){addEventListener('deviceorientation',e=>{tlT[0]=Math.max(-1,Math.min(1,(e.gamma||0)/45));tlT[1]=Math.max(-1,Math.min(1,(e.beta||0)/45));});}
+function amo(){addEventListener('devicemotion',e=>{const a=e.accelerationIncludingGravity;if(!a)return;if(la){const d=Math.hypot((a.x||0)-la.x,(a.y||0)-la.y,(a.z||0)-la.z);if(d>15)shake=Math.min(1,shake+d*.02);}la={x:a.x||0,y:a.y||0,z:a.z||0};});}
+let ac,mg,pg,ng;
+function iau(){
+  try{
+    ac=new(window.AudioContext||window.webkitAudioContext)();
+    // принудительное пробуждение (критично для iOS)
+    if(ac.state==='suspended'){
+      ac.resume();
+    }
+    // резервное пробуждение на любой следующий тап
+    const wake=()=>{
+      if(ac.state==='suspended')ac.resume();
+    };
+    document.addEventListener('touchstart',wake,{once:false});
+    document.addEventListener('click',wake,{once:false});
+    
+    mg=ac.createGain();mg.gain.value=.25;mg.connect(ac.destination);
+    pg=ac.createGain();pg.gain.value=0;
+    const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=800;f.Q.value=2;
+    pg.connect(f);f.connect(mg);
+    [110,164.81,220].forEach(fr=>{
+      const o=ac.createOscillator();o.type='sine';
+      o.frequency.value=fr+(Math.random()-.5)*.5;
+      const g=ac.createGain();g.gain.value=.3;
+      o.connect(g);g.connect(pg);o.start();
+    });
+    pg.gain.linearRampToValueAtTime(.5,ac.currentTime+4);
+    const bs=2*ac.sampleRate,nb=ac.createBuffer(1,bs,ac.sampleRate),da=nb.getChannelData(0);
+    for(let i=0;i<bs;i++)da[i]=(Math.random()*2-1)*.5;
+    const no=ac.createBufferSource();no.buffer=nb;no.loop=true;
+    const nf=ac.createBiquadFilter();nf.type='bandpass';nf.frequency.value=2000;nf.Q.value=.8;
+    ng=ac.createGain();ng.gain.value=0;
+    no.connect(nf);nf.connect(ng);ng.connect(mg);no.start();
+  }catch(e){console.error('Audio init failed:',e);}
+}
+function pluck(x,y){if(!ac)return;const t=ac.currentTime,p=220*Math.pow(2,y*1.2);const o=ac.createOscillator();o.type='triangle';o.frequency.value=p;const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.3,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+1.2);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=1500+Math.abs(x)*2000;o.connect(f);f.connect(g);g.connect(mg);o.start(t);o.stop(t+1.3);}
+function shift(){if(!ac)return;const t=ac.currentTime,o=ac.createOscillator();o.type='sine';o.frequency.setValueAtTime(800,t);o.frequency.exponentialRampToValueAtTime(100,t+1.5);const g=ac.createGain();g.gain.setValueAtTime(.4,t);g.gain.exponentialRampToValueAtTime(.001,t+1.5);o.connect(g);g.connect(mg);o.start(t);o.stop(t+1.5);}
+function sing(){if(!ac)return;const t=ac.currentTime,o=ac.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(55,t);o.frequency.exponentialRampToValueAtTime(880,t+4);const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.25,t+3.5);g.gain.linearRampToValueAtTime(0,t+4.2);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(200,t);f.frequency.exponentialRampToValueAtTime(6000,t+4);o.connect(f);f.connect(g);g.connect(mg);o.start(t);o.stop(t+4.3);
+setTimeout(()=>{const t2=ac.currentTime,b=ac.createOscillator();b.type='sine';b.frequency.setValueAtTime(80,t2);b.frequency.exponentialRampToValueAtTime(20,t2+2);const bg=ac.createGain();bg.gain.setValueAtTime(.6,t2);bg.gain.exponentialRampToValueAtTime(.001,t2+2);b.connect(bg);bg.connect(mg);b.start(t2);b.stop(t2+2);},3800);}
+document.getElementById('go').onclick=()=>{document.getElementById('s').classList.add('h');iau();gyr();st=performance.now();requestAnimationFrame(loop);};
+let singTrig=false,cyc=0;
+function loop(now){const t=(now-st)/1000;tl[0]+=(tlT[0]-tl[0])*.05;tl[1]+=(tlT[1]-tl[1])*.05;pal+=(palT-pal)*.04;fl*=.92;shake*=.95;
+for(let i=0;i<5;i++){if(tc[i][2]>0&&!([...at.values()].includes(i))&&!(md&&i===0))tc[i][2]*=.9;}
+const cs=t-cyc;if(cs>30&&!singTrig){singTrig=true;sing();}
+if(singTrig){sg+=(1-sg)*.02;if(sg>.97){sg=0;singTrig=false;cyc=t;palT+=1;fl=1;}}
+gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uT,t);
+const pf=new Float32Array(15);for(let i=0;i<5;i++){pf[i*3]=tc[i][0];pf[i*3+1]=tc[i][1];pf[i*3+2]=tc[i][2];}
+gl.uniform3fv(uP,pf);gl.uniform2f(uTL,tl[0]+shake*(Math.random()-.5)*.3,tl[1]+shake*(Math.random()-.5)*.3);gl.uniform1f(uPL,pal);gl.uniform1f(uSG,sg);gl.uniform1f(uFL,fl);
+gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
+</script></body></html>
