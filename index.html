@@ -113,7 +113,6 @@ gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uT,t);
 const pf=new Float32Array(15);for(let i=0;i<5;i++){pf[i*3]=tc[i][0];pf[i*3+1]=tc[i][1];pf[i*3+2]=tc[i][2];}
 gl.uniform3fv(uP,pf);gl.uniform2f(uTL,tl[0]+shake*(Math.random()-.5)*.3,tl[1]+shake*(Math.random()-.5)*.3);gl.uniform1f(uPL,pal);gl.uniform1f(uSG,sg);gl.uniform1f(uFL,fl);
 gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
-</script>
 // ===== FIREFLIES MINI-GAME =====
 (function(){
   const flies=[];
@@ -240,4 +239,4 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
-})();</body></html>
+})();</script></body></html>
