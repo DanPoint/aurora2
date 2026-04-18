@@ -38,7 +38,7 @@ float fd=0.;vec2 fl=vec2(0.);for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){vec2 d
 float tm=T*.15;vec2 q=uv*1.2+fl;q+=.3*vec2(fbm(q+tm),fbm(q-tm+5.));float nn=fbm(q*1.5+tm*.7)+fd;
 float bd=sin(nn*6.+T*.4+TL.x*3.)*.5+.5;float gw=pow(bd,2.5);
 vec3 co=mix(pal(nn+bd*.3,floor(PL)),pal(nn+bd*.3,floor(PL)+1.),fract(PL));co*=.6+gw*1.4;
-for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){float r=length(uv0-t.xy);co+=t.z*vec3(1.,.85,1.)*.04/(r*r+.002);}}
+for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){float r=length(uv0-t.xy);co+=t.z*vec3(1.,.85,1.)*.015/(r*r+.008);}}
 co*=1.-dot(uv0,uv0)*.5;co*=mix(1.,.2,s);
 float rg=smoothstep(.02,0.,abs(length(uv0)-(.5-s*.5)))*s;co+=rg*vec3(1.,.9,1.2)*2.;
 co+=vec3(FL);co*=HUE;co+=(h(gl_FragCoord.xy+T)-.5)*.03;gl_FragColor=vec4(co,1.);}`;
