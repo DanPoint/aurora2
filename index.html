@@ -47,7 +47,7 @@ const pr=gl.createProgram();gl.attachShader(pr,mk(gl.VERTEX_SHADER,VS));gl.attac
 const bf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
 const uR=gl.getUniformLocation(pr,'R'),uT=gl.getUniformLocation(pr,'T'),uP=gl.getUniformLocation(pr,'P'),uTL=gl.getUniformLocation(pr,'TL'),uPL=gl.getUniformLocation(pr,'PL'),uSG=gl.getUniformLocation(pr,'SG'),uFL=gl.getUniformLocation(pr,'FL');
-const tc=[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];let tl=[0,0],tlT=[0,0],pal=0,palT=0,sg=0,fl=0,st=0,shake=0,la=null;
+const tc=[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];let tl=[0,0],tlT=[0,0],pal=0,palT=0,sg=0,fl=0,st=0,shake=0,la=null,octave=0;
 function rz(){const d=Math.min(devicePixelRatio||1,2);c.width=innerWidth*d;c.height=innerHeight*d;gl.viewport(0,0,c.width,c.height);}
 addEventListener('resize',rz);rz();
 const at=new Map();
@@ -98,7 +98,7 @@ function iau(){
   }catch(e){console.error('Audio init failed:',e);}
 }
 const pluckScale=[110,130.81,146.83,164.81,196,220,261.63,293.66,329.63,392,440,523.25,587.33,659.25,783.99];
-function pluck(x,y){if(!ac)return;if(window._skipPluck)return;const t=ac.currentTime;const yn=Math.max(0,Math.min(1,(y+.6)/1.2));const idx=Math.floor(yn*(pluckScale.length-1));const p=pluckScale[idx];const o=ac.createOscillator();o.type='triangle';o.frequency.value=p;const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.3,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+1.2);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=1500+Math.abs(x)*2000;o.connect(f);f.connect(g);g.connect(mg);o.start(t);o.stop(t+1.3);}
+function pluck(x,y){if(!ac)return;if(window._skipPluck)return;const t=ac.currentTime;const yn=Math.max(0,Math.min(1,(y+.6)/1.2));const idx=Math.floor(yn*(pluckScale.length-1));const p=pluckScale[idx]*Math.pow(2,octave);const o=ac.createOscillator();o.type='triangle';o.frequency.value=p;const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.35,t+.015);g.gain.exponentialRampToValueAtTime(.001,t+3.5);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=1200+Math.abs(x)*2000;f.Q.value=3;o.connect(f);f.connect(g);g.connect(mg);o.start(t);o.stop(t+3.6);}
 function shift(){if(!ac)return;const t=ac.currentTime,o=ac.createOscillator();o.type='sine';o.frequency.setValueAtTime(800,t);o.frequency.exponentialRampToValueAtTime(100,t+1.5);const g=ac.createGain();g.gain.setValueAtTime(.4,t);g.gain.exponentialRampToValueAtTime(.001,t+1.5);o.connect(g);g.connect(mg);o.start(t);o.stop(t+1.5);}
 function sing(){if(!ac)return;const t=ac.currentTime,o=ac.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(55,t);o.frequency.exponentialRampToValueAtTime(880,t+4);const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.25,t+3.5);g.gain.linearRampToValueAtTime(0,t+4.2);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(200,t);f.frequency.exponentialRampToValueAtTime(6000,t+4);o.connect(f);f.connect(g);g.connect(mg);o.start(t);o.stop(t+4.3);
 setTimeout(()=>{const t2=ac.currentTime,b=ac.createOscillator();b.type='sine';b.frequency.setValueAtTime(80,t2);b.frequency.exponentialRampToValueAtTime(20,t2+2);const bg=ac.createGain();bg.gain.setValueAtTime(.6,t2);bg.gain.exponentialRampToValueAtTime(.001,t2+2);b.connect(bg);bg.connect(mg);b.start(t2);b.stop(t2+2);},3800);}
@@ -107,7 +107,7 @@ let singTrig=false,cyc=0;
 function loop(now){const t=(now-st)/1000;tl[0]+=(tlT[0]-tl[0])*.05;tl[1]+=(tlT[1]-tl[1])*.05;pal+=(palT-pal)*.04;fl*=.92;shake*=.95;
 for(let i=0;i<5;i++){if(tc[i][2]>0&&!([...at.values()].includes(i))&&!(md&&i===0))tc[i][2]*=.9;}
 const cs=t-cyc;if(cs>30&&!singTrig){singTrig=true;sing();}
-if(singTrig){sg+=(1-sg)*.02;if(sg>.97){sg=0;singTrig=false;cyc=t;palT+=1;fl=1;}}
+if(singTrig){sg+=(1-sg)*.02;if(sg>.97){sg=0;singTrig=false;cyc=t;palT+=1;fl=1;const choices=[-1,0,0,1,1,2];let step=choices[Math.floor(Math.random()*choices.length)];octave+=step;if(octave>2)octave=1;if(octave<-2)octave=-1;}}
 gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uT,t);
 const pf=new Float32Array(15);for(let i=0;i<5;i++){pf[i*3]=tc[i][0];pf[i*3+1]=tc[i][1];pf[i*3+2]=tc[i][2];}
 gl.uniform3fv(uP,pf);gl.uniform2f(uTL,tl[0]+shake*(Math.random()-.5)*.3,tl[1]+shake*(Math.random()-.5)*.3);gl.uniform1f(uPL,pal);gl.uniform1f(uSG,sg);gl.uniform1f(uFL,fl);
@@ -184,19 +184,20 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
   const pentatonic=[220,261.63,293.66,329.63,392,440,523.25,587.33,659.25,783.99];
   function ding(hue){
     if(typeof ac==='undefined'||!ac)return;
-    const freq=pentatonic[Math.floor(Math.random()*pentatonic.length)];
+    const oct=(typeof octave!=='undefined'?octave:0);
+    const freq=pentatonic[Math.floor(Math.random()*pentatonic.length)]*2*Math.pow(2,oct);
     const o=ac.createOscillator();
     const g=ac.createGain();
     const f=ac.createBiquadFilter();
     f.type='lowpass';
-    f.frequency.value=2000;
+    f.frequency.value=4000;
     o.type='sine';
     o.frequency.value=freq;
     g.gain.setValueAtTime(0,ac.currentTime);
-    g.gain.linearRampToValueAtTime(.06,ac.currentTime+.02);
-    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+1.2);
+    g.gain.linearRampToValueAtTime(.05,ac.currentTime+.005);
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.4);
     o.connect(f);f.connect(g);g.connect(ac.destination);
-    o.start();o.stop(ac.currentTime+1.3);
+    o.start();o.stop(ac.currentTime+.5);
   }
 
   function loop(now){
