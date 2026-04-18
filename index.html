@@ -87,10 +87,10 @@ function iau(){
     [110,164.81,220].forEach(fr=>{
       const o=ac.createOscillator();o.type='sine';
       o.frequency.value=fr+(Math.random()-.5)*.5;
-      const g=ac.createGain();g.gain.value=.0;
+      const g=ac.createGain();g.gain.value=.3;
       o.connect(g);g.connect(pg);o.start();
     });
-    pg.gain.linearRampToValueAtTime(.5,ac.currentTime+4);
+    pg.gain.linearRampToValueAtTime(.08,ac.currentTime+4);
     const bs=2*ac.sampleRate,nb=ac.createBuffer(1,bs,ac.sampleRate),da=nb.getChannelData(0);
     for(let i=0;i<bs;i++)da[i]=(Math.random()*2-1)*.5;
     const no=ac.createBufferSource();no.buffer=nb;no.loop=true;
