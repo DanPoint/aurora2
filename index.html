@@ -114,20 +114,57 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     } else setTimeout(waitStart,500);
   }
   waitStart();
-  function spawn(){
+    // Мелодические фразы: светляки появляются группами, образующими музыкальную фразу.
+  // Внутри фразы — плавное движение высот (соседние ступени пентатоники),
+  // одна сторона появления, близкие оттенки, равный ритм.
+  // Между фразами — дыхание (пауза).
+  function phrase(){
     if(!started)return;
-    const side=Math.floor(Math.random()*4);
     const w=innerWidth,h=innerHeight;
-    let x,y,vx,vy;
-    const speed=.4+Math.random()*1.8;
-    if(side===0){x=-40;y=Math.random()*h;vx=speed;vy=(Math.random()-.5)*.2;}
-    else if(side===1){x=w+40;y=Math.random()*h;vx=-speed;vy=(Math.random()-.5)*.2;}
-    else if(side===2){x=Math.random()*w;y=-40;vx=(Math.random()-.5)*.2;vy=speed;}
-    else{x=Math.random()*w;y=h+40;vx=(Math.random()-.5)*.2;vy=-speed;}
-    const hue=Math.random()*360;
-    flies.push({x,y,vx,vy,r:18+Math.random()*8,hue,life:1,born:performance.now()});
-    setTimeout(spawn,600+Math.random()*1400);
+    const side=Math.floor(Math.random()*4);
+    const speed=.4+Math.random()*1.4;
+    const baseHue=Math.random()*360;
+    const hueSpread=20+Math.random()*30; // разброс оттенков внутри фразы
+    const len=3+Math.floor(Math.random()*5); // 3..7 нот
+    const stepGap=180+Math.random()*220; // ритм внутри фразы, мс
+    // Начальная ступень (0..9 по pentatonic из ding), плавно двигаемся
+    let step=2+Math.floor(Math.random()*6); // стартуем в середине диапазона
+    // Преобразуем ступень в y-координату: ступень 0 = низ, 9 = верх
+    const yFromStep=s=>{
+      const margin=80;
+      const norm=s/9; // 0..1
+      return h-margin-norm*(h-margin*2);
+    };
+    for(let i=0;i<len;i++){
+      setTimeout(()=>{
+        if(!started)return;
+        // Плавное мелодическое движение: чаще соседи, иногда скачок
+        const r=Math.random();
+        let delta;
+        if(r<.55)delta=(Math.random()<.5?-1:1); // сосед
+        else if(r<.85)delta=(Math.random()<.5?-2:2); // терция
+        else delta=(Math.random()<.5?-4:4); // квинта/скачок
+        step=Math.max(0,Math.min(9,step+delta));
+        const ny=yFromStep(step);
+        // Позиция входа со стороны, y согласован со ступенью
+        let x,y,vx,vy;
+        if(side===0){x=-40;y=ny;vx=speed;vy=(Math.random()-.5)*.15;}
+        else if(side===1){x=w+40;y=ny;vx=-speed;vy=(Math.random()-.5)*.15;}
+        else if(side===2){x=Math.random()*w;y=-40;vx=(Math.random()-.5)*.15;vy=speed;}
+        else{x=Math.random()*w;y=h+40;vx=(Math.random()-.5)*.15;vy=-speed;}
+        // Для боковых сторон (0,1) ступень определяет y напрямую.
+        // Для верх/низ (2,3) — используем x как «высоту» визуально, а ступень кодируем в hue/радиус.
+        const hue=(baseHue+(Math.random()-.5)*hueSpread+360)%360;
+        // Запомним ступень в светляке, чтобы ding использовал её вместо рандома
+        flies.push({x,y,vx,vy,r:18+Math.random()*8,hue,life:1,born:performance.now(),step:step});
+      },i*stepGap);
+    }
+    // Пауза между фразами — "дыхание"
+    const breath=1800+Math.random()*2800; // 1.8..4.6 сек тишины
+    setTimeout(phrase,len*stepGap+breath);
   }
+  // Запускаем цикл фраз вместо старого spawn
+  const spawn=phrase;
   const cv=document.createElement('canvas');
   cv.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9999';
   document.body.appendChild(cv);
@@ -141,8 +178,8 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
       const f=flies[i];
       const d=Math.hypot(f.x-tx,f.y-ty);
       if(d<f.r+20){
-        burst(f.x,f.y,f.hue);
-        ding(f.hue);
+                burst(f.x,f.y,f.hue);
+        ding(f.hue,f.step);
         flies.splice(i,1);
         window._skipPluck=true;
         setTimeout(()=>{window._skipPluck=false;},50);
@@ -161,10 +198,11 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     }
   }
   const pentatonic=[220,261.63,293.66,329.63,392,440,523.25,587.33,659.25,783.99];
-  function ding(hue){
+    function ding(hue,step){
     if(typeof ac==='undefined'||!ac)return;
     const oct=(typeof octave!=='undefined'?octave:0);
-    const freq=pentatonic[Math.floor(Math.random()*pentatonic.length)]*2*Math.pow(2,oct);
+    const idx=(typeof step==='number')?Math.max(0,Math.min(pentatonic.length-1,step)):Math.floor(Math.random()*pentatonic.length);
+    const freq=pentatonic[idx]*2*Math.pow(2,oct);
     const o=ac.createOscillator();
     const g=ac.createGain();
     const f=ac.createBiquadFilter();
@@ -175,7 +213,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     g.gain.setValueAtTime(0,ac.currentTime);
     g.gain.linearRampToValueAtTime(.05,ac.currentTime+.005);
     g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.4);
-    o.connect(f);f.connect(g);g.connect(ac.destination);
+    o.connect(f);f.connect(g);g.connect(mg);
     o.start();o.stop(ac.currentTime+.5);
   }
   function draw(){
