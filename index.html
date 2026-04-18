@@ -98,7 +98,7 @@ let singTrig=false,cyc=0;
 function loop(now){const t=(now-st)/1000;tl[0]+=(tlT[0]-tl[0])*.05;tl[1]+=(tlT[1]-tl[1])*.05;pal+=(palT-pal)*.04;fl*=.92;shake*=.95;
 for(let i=0;i<5;i++){if(tc[i][2]>0&&!([...at.values()].includes(i))&&!(md&&i===0))tc[i][2]*=.9;}
 const cs=t-cyc;if(cs>30&&!singTrig){singTrig=true;sing();}
-if(singTrig){sg+=(1-sg)*.02;if(sg>.97){sg=0;singTrig=false;cyc=t;palT+=1;fl=1;const choices=[-1,0,0,1,1,2];let step=choices[Math.floor(Math.random()*choices.length)];octave+=step;if(octave>2)octave=1;if(octave<-2)octave=-1;hueT[0]=.85+Math.random()*.3;hueT[1]=.85+Math.random()*.3;hueT[2]=.85+Math.random()*.3;}}
+if(singTrig){sg+=(1-sg)*.02;if(sg>.97){sg=0;singTrig=false;cyc=t;palT+=1;fl=1;const choices=[-1,0,0,1,1,2];let step=choices[Math.floor(Math.random()*choices.length)];octave+=step;if(octave>2)octave=1;if(octave<-2)octave=-1;hueT[0]=.85+Math.random()*.3;hueT[1]=.85+Math.random()*.3;hueT[2]=.85+Math.random()*.3;window._clearFlies=true;}}
 gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uT,t);
 const pf=new Float32Array(15);for(let i=0;i<5;i++){pf[i*3]=tc[i][0];pf[i*3+1]=tc[i][1];pf[i*3+2]=tc[i][2];}
 gl.uniform3fv(uP,pf);gl.uniform2f(uTL,tl[0]+shake*(Math.random()-.5)*.3,tl[1]+shake*(Math.random()-.5)*.3);gl.uniform1f(uPL,pal);gl.uniform1f(uSG,sg);gl.uniform1f(uFL,fl);hue[0]+=(hueT[0]-hue[0])*.01;hue[1]+=(hueT[1]-hue[1])*.01;hue[2]+=(hueT[2]-hue[2])*.01;gl.uniform3f(uHUE,hue[0],hue[1],hue[2]);
@@ -208,17 +208,25 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     const f=ac.createBiquadFilter();
     f.type='lowpass';
     f.frequency.value=4000;
-    o.type='sine';
+    o.type='triangle';
     o.frequency.value=freq;
     g.gain.setValueAtTime(0,ac.currentTime);
-    g.gain.linearRampToValueAtTime(.05,ac.currentTime+.005);
-    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.4);
+    g.gain.linearRampToValueAtTime(.18,ac.currentTime+.005);
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.8);
     o.connect(f);f.connect(g);g.connect(mg);
     o.start();o.stop(ac.currentTime+.5);
   }
-  function draw(){
+    function draw(){
     cx.clearRect(0,0,innerWidth,innerHeight);
     const now=performance.now();
+    // Очистка светляков в момент смены тональности — "выдох" композиции
+    if(window._clearFlies){
+      window._clearFlies=false;
+      for(const f of flies){
+        bursts.push({x:f.x,y:f.y,hue:f.hue,r:0,life:1,born:now});
+      }
+      flies.length=0;
+    }
     for(let i=flies.length-1;i>=0;i--){
       const f=flies[i];
       f.x+=f.vx;f.y+=f.vy;
