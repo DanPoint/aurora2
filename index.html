@@ -34,7 +34,7 @@ float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);float a=h(i),b=h(i+vec2(1,0)),c=h(i+vec2(0,1)),d=h(i+vec2(1,1));vec2 u=f*f*(3.-2.*f);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
 float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p*=2.03;a*=.5;}return v;}
 void main(){vec2 uv=(gl_FragCoord.xy-.5*R)/min(R.x,R.y),uv0=uv;uv+=TL*.35;float s=smoothstep(0.,1.,SG);uv*=mix(1.,.15,s);
-float fd=0.;vec2 fl=vec2(0.);for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){vec2 d=uv0-t.xy;float r=length(d);fd+=t.z*.08/(r*r+.03);fl+=-normalize(d+.0001)*t.z*.02/(r+.1);}}
+float fd=0.;vec2 fl=vec2(0.);for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){vec2 d=uv0-t.xy;float r=length(d);fd+=t.z*.08/(r*r+.09);fl+=-normalize(d+.0001)*t.z*.02/(r+.18);}}
 float tm=T*.15;vec2 q=uv*1.2+fl;q+=.3*vec2(fbm(q+tm),fbm(q-tm+5.));float nn=fbm(q*1.5+tm*.7)+fd;
 float bd=sin(nn*6.+T*.4+TL.x*3.)*.5+.5;float gw=pow(bd,2.5);
 vec3 co=mix(pal(nn+bd*.3,floor(PL)),pal(nn+bd*.3,floor(PL)+1.),fract(PL));co*=.6+gw*1.4;
