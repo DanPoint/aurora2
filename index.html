@@ -87,7 +87,7 @@ function iau(){
     [110,164.81,220].forEach(fr=>{
       const o=ac.createOscillator();o.type='sine';
       o.frequency.value=fr+(Math.random()-.5)*.5;
-      const g=ac.createGain();g.gain.value=.3;
+      const g=ac.createGain();g.gain.value=.08;
       o.connect(g);g.connect(pg);o.start();
     });
     pg.gain.linearRampToValueAtTime(.5,ac.currentTime+4);
