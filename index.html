@@ -120,8 +120,8 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
   let started=false;
 
   // стартуем через 3 сек после ENTER (когда появился ac)
-  function waitStart(){
-    if(window.ac&&window.ac.state==='running'){
+    function waitStart(){
+    if(typeof ac!=='undefined'&&ac&&ac.state==='running'){
       setTimeout(()=>{started=true;spawn();},3000);
     } else {
       setTimeout(waitStart,500);
@@ -180,7 +180,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
   }
 
   function ding(hue){
-    if(!window.ac)return;
+      if(typeof ac==='undefined'||!ac)return;
     const o=ac.createOscillator();
     const g=ac.createGain();
     o.type='triangle';
