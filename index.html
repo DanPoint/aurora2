@@ -110,7 +110,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
   let started=false;
   function waitStart(){
     if(typeof ac!=='undefined'&&ac&&ac.state==='running'){
-      started=true;spawn();spawn();spawn();
+            started=true;spawn();
     } else setTimeout(waitStart,500);
   }
   waitStart();
@@ -121,7 +121,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
   function phrase(){
     if(!started)return;
     const w=innerWidth,h=innerHeight;
-    const side=Math.floor(Math.random()*4);
+    const side=Math.floor(Math.random()*2); // только слева и справа
     const speed=.4+Math.random()*1.4;
     const baseHue=Math.random()*360;
     const hueSpread=20+Math.random()*30; // разброс оттенков внутри фразы
