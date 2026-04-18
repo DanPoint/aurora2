@@ -113,4 +113,131 @@ gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uT,t);
 const pf=new Float32Array(15);for(let i=0;i<5;i++){pf[i*3]=tc[i][0];pf[i*3+1]=tc[i][1];pf[i*3+2]=tc[i][2];}
 gl.uniform3fv(uP,pf);gl.uniform2f(uTL,tl[0]+shake*(Math.random()-.5)*.3,tl[1]+shake*(Math.random()-.5)*.3);gl.uniform1f(uPL,pal);gl.uniform1f(uSG,sg);gl.uniform1f(uFL,fl);
 gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
-</script></body></html>
+</script>
+// ===== FIREFLIES MINI-GAME =====
+(function(){
+  const flies=[];
+  const bursts=[];
+  let started=false;
+
+  // стартуем через 3 сек после ENTER (когда появился ac)
+  function waitStart(){
+    if(window.ac&&window.ac.state==='running'){
+      setTimeout(()=>{started=true;spawn();},3000);
+    } else {
+      setTimeout(waitStart,500);
+    }
+  }
+  waitStart();
+
+  function spawn(){
+    if(!started)return;
+    const side=Math.floor(Math.random()*4);
+    const w=innerWidth,h=innerHeight;
+    let x,y,vx,vy;
+    const speed=.3+Math.random()*.3;
+    if(side===0){x=-40;y=Math.random()*h;vx=speed;vy=(Math.random()-.5)*.2;}
+    else if(side===1){x=w+40;y=Math.random()*h;vx=-speed;vy=(Math.random()-.5)*.2;}
+    else if(side===2){x=Math.random()*w;y=-40;vx=(Math.random()-.5)*.2;vy=speed;}
+    else{x=Math.random()*w;y=h+40;vx=(Math.random()-.5)*.2;vy=-speed;}
+    const hue=Math.random()*360;
+    flies.push({x,y,vx,vy,r:18+Math.random()*8,hue,life:1,born:performance.now()});
+    setTimeout(spawn, 2000+Math.random()*3000);
+  }
+
+  // canvas поверх всего
+  const cv=document.createElement('canvas');
+  cv.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9999';
+  document.body.appendChild(cv);
+  const cx=cv.getContext('2d');
+  function resize(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';cx.scale(devicePixelRatio,devicePixelRatio);}
+  resize();addEventListener('resize',resize);
+
+  // тапы
+  function tap(e){
+    const t=e.touches?e.touches[0]:e;
+    const tx=t.clientX,ty=t.clientY;
+    for(let i=flies.length-1;i>=0;i--){
+      const f=flies[i];
+      const d=Math.hypot(f.x-tx,f.y-ty);
+      if(d<f.r+20){
+        burst(f.x,f.y,f.hue);
+        ding(f.hue);
+        flies.splice(i,1);
+        return;
+      }
+    }
+  }
+  addEventListener('touchstart',tap,{passive:true});
+  addEventListener('mousedown',tap);
+
+  function burst(x,y,hue){
+    bursts.push({x,y,hue,r:0,life:1,born:performance.now()});
+    for(let i=0;i<8;i++){
+      const a=Math.random()*Math.PI*2;
+      const sp=1+Math.random()*2;
+      bursts.push({x,y,hue,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:3,life:1,born:performance.now(),particle:true});
+    }
+  }
+
+  function ding(hue){
+    if(!window.ac)return;
+    const o=ac.createOscillator();
+    const g=ac.createGain();
+    o.type='triangle';
+    const base=400+hue*2;
+    o.frequency.setValueAtTime(base,ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(base*2,ac.currentTime+.15);
+    g.gain.setValueAtTime(0,ac.currentTime);
+    g.gain.linearRampToValueAtTime(.15,ac.currentTime+.01);
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.4);
+    o.connect(g);g.connect(ac.destination);
+    o.start();o.stop(ac.currentTime+.5);
+  }
+
+  function loop(now){
+    cx.clearRect(0,0,innerWidth,innerHeight);
+    // светляки
+    for(let i=flies.length-1;i>=0;i--){
+      const f=flies[i];
+      f.x+=f.vx;f.y+=f.vy;
+      const pulse=.8+Math.sin(now*.003+i)*.2;
+      // мягкое пятно
+      const grad=cx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r*2.5);
+      grad.addColorStop(0,`hsla(${f.hue},90%,70%,${.5*pulse})`);
+      grad.addColorStop(.4,`hsla(${f.hue},90%,60%,${.2*pulse})`);
+      grad.addColorStop(1,`hsla(${f.hue},90%,50%,0)`);
+      cx.fillStyle=grad;
+      cx.beginPath();cx.arc(f.x,f.y,f.r*2.5,0,Math.PI*2);cx.fill();
+      // ядро
+      cx.fillStyle=`hsla(${f.hue},100%,90%,${.9*pulse})`;
+      cx.beginPath();cx.arc(f.x,f.y,2.5,0,Math.PI*2);cx.fill();
+      // удалить улетевших
+      if(f.x<-80||f.x>innerWidth+80||f.y<-80||f.y>innerHeight+80){
+        flies.splice(i,1);
+      }
+    }
+    // вспышки
+    for(let i=bursts.length-1;i>=0;i--){
+      const b=bursts[i];
+      const age=(now-b.born)/500;
+      if(age>=1){bursts.splice(i,1);continue;}
+      if(b.particle){
+        b.x+=b.vx;b.y+=b.vy;
+        b.vx*=.94;b.vy*=.94;
+        cx.fillStyle=`hsla(${b.hue},100%,80%,${1-age})`;
+        cx.beginPath();cx.arc(b.x,b.y,b.r*(1-age*.5),0,Math.PI*2);cx.fill();
+      } else {
+        const r=age*60;
+        const grad=cx.createRadialGradient(b.x,b.y,0,b.x,b.y,r);
+        grad.addColorStop(0,`hsla(${b.hue},100%,90%,0)`);
+        grad.addColorStop(.7,`hsla(${b.hue},100%,75%,${(1-age)*.6})`);
+        grad.addColorStop(1,`hsla(${b.hue},100%,60%,0)`);
+        cx.fillStyle=grad;
+        cx.beginPath();cx.arc(b.x,b.y,r,0,Math.PI*2);cx.fill();
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();</body></html>
