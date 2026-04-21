@@ -33,9 +33,20 @@ return a+b*cos(6.283*(c*t+d));}
 float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);float a=h(i),b=h(i+vec2(1,0)),c=h(i+vec2(0,1)),d=h(i+vec2(1,1));vec2 u=f*f*(3.-2.*f);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
 float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p*=2.03;a*=.5;}return v;}
+float ridged(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*(1.-abs(n(p)*2.-1.));p*=2.03;a*=.5;}return v*.7;}
+float turb(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*abs(n(p)*2.-1.);p*=2.03;a*=.5;}return v;}
+float warp(vec2 p){vec2 q=vec2(fbm(p+vec2(1.7,9.2)),fbm(p+vec2(8.3,2.8)));return fbm(p+4.*q);}
+float vor(vec2 p){vec2 ip=floor(p),fp=fract(p);float md=1.;for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){vec2 g=vec2(float(x),float(y));vec2 o=vec2(h(ip+g),h(ip+g+7.3));vec2 r=g+o-fp;md=min(md,dot(r,r));}return 1.-sqrt(md);}
+float field(vec2 p,float w){float m=mod(w,5.);
+if(m<1.)return fbm(p);
+else if(m<2.)return ridged(p);
+else if(m<3.)return turb(p);
+else if(m<4.)return warp(p);
+else return vor(p);}
+float fieldMix(vec2 p,float w){float f=fract(w);float a=field(p,floor(w));float b=field(p,floor(w)+1.);return mix(a,b,f);}
 void main(){vec2 uv=(gl_FragCoord.xy-.5*R)/min(R.x,R.y),uv0=uv;uv+=TL*.35;float s=smoothstep(0.,1.,SG);uv*=mix(1.,.15,s);
 float fd=0.;vec2 fl=vec2(0.);for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){vec2 d=uv0-t.xy;float r=length(d);fd+=t.z*.012/(r*r+.09);fl+=-normalize(d+.0001)*t.z*.05/(r+.35);}}
-float tm=T*.15;vec2 q=uv*1.2+fl;q+=.3*vec2(fbm(q+tm),fbm(q-tm+5.));float nn=fbm(q*1.5+tm*.7)+fd;
+float tm=T*.15;vec2 q=uv*1.2+fl;q+=.3*vec2(fieldMix(q+tm,PL),fieldMix(q-tm+5.,PL));float nn=fieldMix(q*1.5+tm*.7,PL)+fd;
 float bd=sin(nn*6.+T*.4+TL.x*3.)*.5+.5;float gw=pow(bd,2.5);
 vec3 co=mix(pal(nn+bd*.3,floor(PL)),pal(nn+bd*.3,floor(PL)+1.),fract(PL));co*=.5+gw*.7;co*=.5+gw*.7;co=co/(1.+co*.6);
 for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){float r=length(uv0-t.xy);co+=t.z*vec3(1.,.85,1.)*.008/(r*r+.02);}}
