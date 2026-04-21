@@ -22,7 +22,7 @@ canvas{display:block;width:100vw;height:100vh;width:100dvw;height:100dvh}
 const c=document.getElementById('c'),gl=c.getContext('webgl',{antialias:false});
 if(!gl){document.body.innerHTML='<p style="color:#fff;padding:40px">WebGL not supported</p>';throw 0}
 const VS=`attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
-const FS=`precision highp float;uniform vec2 R;uniform float T;uniform vec3 P[5];uniform vec2 TL;uniform float PL;uniform float SG;uniform float FL;uniform vec3 HUE;
+const FS=`precision highp float;uniform vec2 R;uniform float T;uniform vec3 P[5];uniform vec2 TL;uniform float PL;uniform float SG;uniform float FL;uniform vec3 HUE;uniform float PU;
 vec3 pal(float t,float i){i=mod(i,5.);vec3 a=vec3(.5),b=vec3(.5),c,d;
 if(i<1.){c=vec3(1.);d=vec3(.3,.2,.7);}
 else if(i<2.){c=vec3(1.,.7,.4);d=vec3(0.,.15,.2);}
@@ -37,7 +37,7 @@ void main(){vec2 uv=(gl_FragCoord.xy-.5*R)/min(R.x,R.y),uv0=uv;uv+=TL*.35;float 
 float fd=0.;vec2 fl=vec2(0.);for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){vec2 d=uv0-t.xy;float r=length(d);fd+=t.z*.012/(r*r+.09);fl+=-normalize(d+.0001)*t.z*.05/(r+.35);}}
 float tm=T*.15;vec2 q=uv*1.2+fl;q+=.3*vec2(fbm(q+tm),fbm(q-tm+5.));float nn=fbm(q*1.5+tm*.7)+fd;
 float bd=sin(nn*6.+T*.4+TL.x*3.)*.5+.5;float gw=pow(bd,2.5);
-vec3 co=mix(pal(nn+bd*.3,floor(PL)),pal(nn+bd*.3,floor(PL)+1.),fract(PL));co*=.5+gw*.7;co=co/(1.+co*.6);
+vec3 co=mix(pal(nn+bd*.3,floor(PL)),pal(nn+bd*.3,floor(PL)+1.),fract(PL));co*=.5+gw*.7;co*=.93+PU*.14;co=co/(1.+co*.6);
 for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){float r=length(uv0-t.xy);co+=t.z*vec3(1.,.85,1.)*.008/(r*r+.02);}}
 co*=1.-dot(uv0,uv0)*.5;co*=mix(1.,.2,s);
 float rg=smoothstep(.02,0.,abs(length(uv0)-(.5-s*.5)))*s;co+=rg*vec3(1.,.9,1.2)*2.;
@@ -46,7 +46,7 @@ function mk(t,s){const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShade
 const pr=gl.createProgram();gl.attachShader(pr,mk(gl.VERTEX_SHADER,VS));gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);gl.useProgram(pr);
 const bf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
-const uR=gl.getUniformLocation(pr,'R'),uT=gl.getUniformLocation(pr,'T'),uP=gl.getUniformLocation(pr,'P'),uTL=gl.getUniformLocation(pr,'TL'),uPL=gl.getUniformLocation(pr,'PL'),uSG=gl.getUniformLocation(pr,'SG'),uFL=gl.getUniformLocation(pr,'FL'),uHUE=gl.getUniformLocation(pr,'HUE');
+const uR=gl.getUniformLocation(pr,'R'),uT=gl.getUniformLocation(pr,'T'),uP=gl.getUniformLocation(pr,'P'),uTL=gl.getUniformLocation(pr,'TL'),uPL=gl.getUniformLocation(pr,'PL'),uSG=gl.getUniformLocation(pr,'SG'),uFL=gl.getUniformLocation(pr,'FL'),uHUE=gl.getUniformLocation(pr,'HUE'),uPU=gl.getUniformLocation(pr,'PU');
 const tc=[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];let tl=[0,0],tlT=[0,0],pal=0,palT=0,sg=0,fl=0,st=0,shake=0,la=null,octave=0,hue=[1,1,1],hueT=[1,1,1];
 function rz(){const d=Math.min(devicePixelRatio||1,2);c.width=innerWidth*d;c.height=innerHeight*d;gl.viewport(0,0,c.width,c.height);}
 addEventListener('resize',rz);rz();
@@ -96,12 +96,17 @@ setTimeout(()=>{const t2=ac.currentTime,b=ac.createOscillator();b.type='sine';b.
 document.getElementById('go').onclick=()=>{document.getElementById('s').classList.add('h');iau();gyr();st=performance.now();requestAnimationFrame(loop);};
 let singTrig=false,cyc=0;
 function loop(now){const t=(now-st)/1000;tl[0]+=(tlT[0]-tl[0])*.05;tl[1]+=(tlT[1]-tl[1])*.05;pal+=(palT-pal)*.04;fl*=.92;shake*=.95;
+// === RESONANCE: global pulse ===
+window._pulsePhase=(window._pulsePhase||0)+.011;
+const pulse=(Math.sin(window._pulsePhase)*.5+.5);
+window._pulse=pulse;
+if(pg&&ac)pg.gain.setTargetAtTime(.06+pulse*.04,ac.currentTime,.3);
 for(let i=0;i<5;i++){if(tc[i][2]>0&&!([...at.values()].includes(i))&&!(md&&i===0))tc[i][2]*=.9;}
 const cs=t-cyc;if(cs>30&&!singTrig){singTrig=true;sing();}
 if(singTrig){sg+=(1-sg)*.02;if(sg>.97){sg=0;singTrig=false;cyc=t;palT+=1;fl=1;const choices=[-1,0,0,1,1,2];let step=choices[Math.floor(Math.random()*choices.length)];octave+=step;if(octave>2)octave=1;if(octave<-2)octave=-1;hueT[0]=.85+Math.random()*.3;hueT[1]=.85+Math.random()*.3;hueT[2]=.85+Math.random()*.3;window._clearFlies=true;}}
 gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uT,t);
 const pf=new Float32Array(15);for(let i=0;i<5;i++){pf[i*3]=tc[i][0];pf[i*3+1]=tc[i][1];pf[i*3+2]=tc[i][2];}
-gl.uniform3fv(uP,pf);gl.uniform2f(uTL,tl[0]+shake*(Math.random()-.5)*.3,tl[1]+shake*(Math.random()-.5)*.3);gl.uniform1f(uPL,pal);gl.uniform1f(uSG,sg);gl.uniform1f(uFL,fl);hue[0]+=(hueT[0]-hue[0])*.01;hue[1]+=(hueT[1]-hue[1])*.01;hue[2]+=(hueT[2]-hue[2])*.01;gl.uniform3f(uHUE,hue[0],hue[1],hue[2]);
+gl.uniform3fv(uP,pf);gl.uniform2f(uTL,tl[0]+shake*(Math.random()-.5)*.3,tl[1]+shake*(Math.random()-.5)*.3);gl.uniform1f(uPL,pal);gl.uniform1f(uSG,sg);gl.uniform1f(uFL,fl);hue[0]+=(hueT[0]-hue[0])*.01;hue[1]+=(hueT[1]-hue[1])*.01;hue[2]+=(hueT[2]-hue[2])*.01;gl.uniform3f(uHUE,hue[0],hue[1],hue[2]);gl.uniform1f(uPU,pulse);
 gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
 // ===== FIREFLIES =====
 (function(){
@@ -110,19 +115,16 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
   let started=false;
   function waitStart(){
     if(typeof ac!=='undefined'&&ac&&ac.state==='running'){
-            started=true;spawn();
+      started=true;spawn();
     } else setTimeout(waitStart,500);
   }
   waitStart();
-      // Мелодические фразы: светляки "загораются" прямо в кадре, в разных местах.
-  // Внутри фразы — плавное мелодическое движение + случайное расположение по x.
-  // Появляются сразу (с плавным fade-in), медленно дрейфуют.
   function phrase(){
     if(!started)return;
     const w=innerWidth,h=innerHeight;
     const baseHue=Math.random()*360;
     const hueSpread=20+Math.random()*35;
-    const len=4+Math.floor(Math.random()*6); // 4..9 нот — побольше
+    const len=4+Math.floor(Math.random()*6);
     const stepGap=160+Math.random()*220;
     let stepNote=2+Math.floor(Math.random()*6);
     const yFromStep=s=>{
@@ -133,18 +135,15 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     for(let i=0;i<len;i++){
       setTimeout(()=>{
         if(!started)return;
-        // Мелодическое движение
         const r=Math.random();
         let delta;
         if(r<.55)delta=(Math.random()<.5?-1:1);
         else if(r<.85)delta=(Math.random()<.5?-2:2);
         else delta=(Math.random()<.5?-4:4);
         stepNote=Math.max(0,Math.min(9,stepNote+delta));
-        // Позиция: y по ступени, x — случайно в пределах экрана с отступом
         const xMargin=w*.1;
         const x=xMargin+Math.random()*(w-xMargin*2);
-        const y=yFromStep(stepNote)+(Math.random()-.5)*40; // лёгкое вертикальное дребезжание
-        // Медленный дрейф — почти стоит
+        const y=yFromStep(stepNote)+(Math.random()-.5)*40;
         const driftAngle=Math.random()*Math.PI*2;
         const driftSpeed=.1+Math.random()*.3;
         const vx=Math.cos(driftAngle)*driftSpeed;
@@ -157,7 +156,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
           life:1,
           born:performance.now(),
           step:stepNote,
-          fadeIn:0 // для плавного появления
+          fadeIn:0
         });
       },i*stepGap);
     }
@@ -169,7 +168,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
   cv.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9999';
   document.body.appendChild(cv);
   const cx=cv.getContext('2d');
-  function resize(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';cx.scale(devicePixelRatio,devicePixelRatio);}
+    function resize(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';cx.scale(devicePixelRatio,devicePixelRatio);}
   resize();addEventListener('resize',resize);
   function tap(e){
     const t=e.touches?e.touches[0]:e;
@@ -178,8 +177,10 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
       const f=flies[i];
       const d=Math.hypot(f.x-tx,f.y-ty);
       if(d<f.r+20){
-                burst(f.x,f.y,f.hue);
+        burst(f.x,f.y,f.hue);
         ding(f.hue,f.step);
+        // === RESONANCE: tap resets pulse phase ===
+        window._pulsePhase=0;
         flies.splice(i,1);
         window._skipPluck=true;
         setTimeout(()=>{window._skipPluck=false;},50);
@@ -198,13 +199,12 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     }
   }
   const pentatonic=[220,261.63,293.66,329.63,392,440,523.25,587.33,659.25,783.99];
-      function ding(hue,step){
+  function ding(hue,step){
     if(typeof ac==='undefined'||!ac)return;
     const oct=(typeof octave!=='undefined'?octave:0);
     const idx=(typeof step==='number')?Math.max(0,Math.min(pentatonic.length-1,step)):Math.floor(Math.random()*pentatonic.length);
     const freq=pentatonic[idx]*2*Math.pow(2,oct);
     const now=ac.currentTime;
-    // Основной тон
     const o=ac.createOscillator();o.type='triangle';o.frequency.value=freq;
     const g=ac.createGain();
     const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=6000;
@@ -213,7 +213,6 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     g.gain.exponentialRampToValueAtTime(.001,now+1.2);
     o.connect(f);f.connect(g);g.connect(mg);
     o.start(now);o.stop(now+1.3);
-    // Октавный обертон — даёт "колокольчик"
     const o2=ac.createOscillator();o2.type='sine';o2.frequency.value=freq*2;
     const g2=ac.createGain();
     g2.gain.setValueAtTime(0,now);
@@ -222,10 +221,13 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
     o2.connect(g2);g2.connect(mg);
     o2.start(now);o2.stop(now+.7);
   }
-    function draw(){
+  function draw(){
     cx.clearRect(0,0,innerWidth,innerHeight);
     const now=performance.now();
-    // Очистка в момент смены тональности — "выдох" композиции
+    const pulse=window._pulse||0;
+    // === WIND from gyroscope ===
+    const windX=(typeof tl!=='undefined'?tl[0]:0)*.15;
+    const windY=(typeof tl!=='undefined'?tl[1]:0)*.15;
     if(window._clearFlies){
       window._clearFlies=false;
       for(const f of flies){
@@ -233,23 +235,44 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
       }
       flies.length=0;
     }
+    // === CONSTELLATIONS: draw lines between close flies on pulse peak ===
+    if(pulse>.6&&flies.length>1){
+      const lineAlpha=(pulse-.6)/.4;
+      for(let i=0;i<flies.length;i++){
+        for(let j=i+1;j<flies.length;j++){
+          const a=flies[i],b=flies[j];
+          const d=Math.hypot(a.x-b.x,a.y-b.y);
+          const maxD=180;
+          if(d<maxD){
+            const alpha=lineAlpha*(1-d/maxD)*.35*Math.min(a.fadeIn,b.fadeIn);
+            const mh=(a.hue+b.hue)/2;
+            cx.strokeStyle=`hsla(${mh},90%,80%,${alpha})`;
+            cx.lineWidth=.8;
+            cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();
+          }
+        }
+      }
+    }
     for(let i=flies.length-1;i>=0;i--){
       const f=flies[i];
-      f.x+=f.vx;f.y+=f.vy;
-      // Плавное загорание (fade-in) первые 0.6 сек жизни
+      // Ветер от гироскопа + собственный дрейф
+      f.x+=f.vx+windX;f.y+=f.vy-windY;
       if(f.fadeIn<1)f.fadeIn=Math.min(1,f.fadeIn+.03);
-      const pulse=(.7+.3*Math.sin((now-f.born)*.004))*f.fadeIn;
+      // Пульсация синхронизирована с общим ритмом
+      const pulseGlow=.7+.3*pulse;
+      const ownPulse=.85+.15*Math.sin((now-f.born)*.004);
+      const bright=pulseGlow*ownPulse*f.fadeIn;
       const w=innerWidth,h=innerHeight;
       if(f.x<-80||f.x>w+80||f.y<-80||f.y>h+80){flies.splice(i,1);continue;}
       const g1=cx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r*3);
-      g1.addColorStop(0,`hsla(${f.hue},90%,75%,${.5*pulse})`);
-      g1.addColorStop(.3,`hsla(${f.hue},90%,65%,${.2*pulse})`);
+      g1.addColorStop(0,`hsla(${f.hue},90%,75%,${.5*bright})`);
+      g1.addColorStop(.3,`hsla(${f.hue},90%,65%,${.2*bright})`);
       g1.addColorStop(1,`hsla(${f.hue},90%,55%,0)`);
       cx.fillStyle=g1;
       cx.beginPath();cx.arc(f.x,f.y,f.r*3,0,Math.PI*2);cx.fill();
       const g2=cx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r);
-      g2.addColorStop(0,`hsla(${f.hue},100%,95%,${.9*pulse})`);
-      g2.addColorStop(.5,`hsla(${f.hue},100%,80%,${.6*pulse})`);
+      g2.addColorStop(0,`hsla(${f.hue},100%,95%,${.9*bright})`);
+      g2.addColorStop(.5,`hsla(${f.hue},100%,80%,${.6*bright})`);
       g2.addColorStop(1,`hsla(${f.hue},100%,70%,0)`);
       cx.fillStyle=g2;
       cx.beginPath();cx.arc(f.x,f.y,f.r,0,Math.PI*2);cx.fill();
