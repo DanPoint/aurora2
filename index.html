@@ -151,7 +151,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
         const vx=Math.cos(driftAngle)*driftSpeed;
         const vy=Math.sin(driftAngle)*driftSpeed;
         const hue=(baseHue+(Math.random()-.5)*hueSpread+360)%360;
-        flies.push({
+          flies.push({
           x,y,vx,vy,
           r:16+Math.random()*10,
           hue,
@@ -159,7 +159,11 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
           born:performance.now(),
           step:stepNote,
           fadeIn:0,
-          pid:pid
+          pid:pid,
+          phaseX:Math.random()*Math.PI*2,
+          phaseY:Math.random()*Math.PI*2,
+          freqX:.3+Math.random()*.25,
+          freqY:.35+Math.random()*.3
         });
       },i*stepGap);
     }
@@ -266,11 +270,14 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
       for(const pid in constellations)constellations[pid].deathAt=now+800;
     }
     const wind=window._tilt||{x:0,y:0};
-    const windX=wind.x*.25;
+    const windX=wind.x*.6;
+    const tSec=now*.001;
     for(let i=flies.length-1;i>=0;i--){
       const f=flies[i];
-      f.vx=f.vx*.97+windX*.04;
-      f.vy*=.98;
+      const floatX=Math.sin(tSec*f.freqX+f.phaseX)*.7;
+      const floatY=Math.cos(tSec*f.freqY+f.phaseY)*.55;
+      f.vx=f.vx*.94+floatX*.09+windX*.12;
+      f.vy=f.vy*.94+floatY*.09;
       f.x+=f.vx;f.y+=f.vy;
       if(f.fadeIn<1)f.fadeIn=Math.min(1,f.fadeIn+.03);
       const bright=(.7+.3*Math.sin((now-f.born)*.004))*f.fadeIn;
