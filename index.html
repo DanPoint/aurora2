@@ -345,10 +345,13 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
         b.x+=b.vx;b.y+=b.vy;b.vx*=.95;b.vy*=.95;
         cx.fillStyle=`hsla(${b.hue},100%,85%,${b.life})`;
         cx.beginPath();cx.arc(b.x,b.y,b.r*b.life,0,Math.PI*2);cx.fill();
-      } else {
+        } else {
         b.r+=4;
-        cx.strokeStyle=`hsla(${b.hue},100%,80%,${b.life*.6})`;
-        cx.lineWidth=2*b.life;
+        cx.strokeStyle=`hsla(${b.hue},95%,60%,${b.life*.85})`;
+        cx.lineWidth=3*b.life;
+        cx.beginPath();cx.arc(b.x,b.y,b.r,0,Math.PI*2);cx.stroke();
+        cx.strokeStyle=`hsla(${b.hue},100%,75%,${b.life*.35})`;
+        cx.lineWidth=8*b.life;
         cx.beginPath();cx.arc(b.x,b.y,b.r,0,Math.PI*2);cx.stroke();
       }
     }
