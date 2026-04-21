@@ -266,11 +266,11 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
       for(const pid in constellations)constellations[pid].deathAt=now+800;
     }
     const wind=window._tilt||{x:0,y:0};
-    const windX=wind.x*.35,windY=wind.y*.35;
+    const windX=wind.x*.25;
     for(let i=flies.length-1;i>=0;i--){
       const f=flies[i];
-      f.vx=f.vx*.96+windX;
-      f.vy=f.vy*.96+windY;
+      f.vx=f.vx*.97+windX*.04;
+      f.vy*=.98;
       f.x+=f.vx;f.y+=f.vy;
       if(f.fadeIn<1)f.fadeIn=Math.min(1,f.fadeIn+.03);
       const bright=(.7+.3*Math.sin((now-f.born)*.004))*f.fadeIn;
