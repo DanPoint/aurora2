@@ -294,22 +294,6 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
       const bright=(.7+.3*Math.sin((now-f.born)*.004))*f.fadeIn;
       const w=innerWidth,h=innerHeight;
       if(f.x<-80||f.x>w+80||f.y<-80||f.y>h+80){flies.splice(i,1);continue;}
-      f.trail.push(f.x,f.y);
-      if(f.trail.length>60)f.trail.splice(0,2);
-      const tlen=f.trail.length;
-      if(tlen>=4){
-        for(let k=0;k<tlen-2;k+=2){
-          const frac=k/tlen;
-          const a=frac*.45*f.fadeIn;
-          cx.strokeStyle=`hsla(${f.hue},95%,80%,${a})`;
-          cx.lineWidth=4*frac;
-          cx.lineCap='round';
-          cx.beginPath();
-          cx.moveTo(f.trail[k],f.trail[k+1]);
-          cx.lineTo(f.trail[k+2],f.trail[k+3]);
-          cx.stroke();
-        }
-      }
       const g1=cx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r*3);
       g1.addColorStop(0,`hsla(${f.hue},90%,75%,${.5*bright})`);
       g1.addColorStop(.3,`hsla(${f.hue},90%,65%,${.2*bright})`);
