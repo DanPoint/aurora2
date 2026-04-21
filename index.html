@@ -276,7 +276,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
       const f=flies[i];
       const floatX=Math.sin(tSec*f.freqX+f.phaseX)*.7;
       const floatY=Math.cos(tSec*f.freqY+f.phaseY)*.55;
-      f.vx=f.vx*.94+floatX*.09+windX*.12;
+      f.vx=f.vx*.94+floatX*.09+windX*.18;
       f.vy=f.vy*.94+floatY*.09;
       f.x+=f.vx;f.y+=f.vy;
       if(f.fadeIn<1)f.fadeIn=Math.min(1,f.fadeIn+.03);
