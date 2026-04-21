@@ -41,7 +41,7 @@ vec3 co=mix(pal(nn+bd*.3,floor(PL)),pal(nn+bd*.3,floor(PL)+1.),fract(PL));co*=.5
 for(int i=0;i<5;i++){vec3 t=P[i];if(t.z>.01){float r=length(uv0-t.xy);co+=t.z*vec3(1.,.85,1.)*.008/(r*r+.02);}}
 co*=1.-dot(uv0,uv0)*.5;co*=mix(1.,.2,s);
 float rg=smoothstep(.02,0.,abs(length(uv0)-(.5-s*.5)))*s;co+=rg*vec3(1.,.9,1.2)*2.;
-if(WV.z>=0.&&WV.z<1.2){float wd=length(uv0-WV.xy);float wr=WV.z*.9;float wring=exp(-pow((wd-wr)*8.,2.))*(1.-WV.z/1.2);co+=vec3(1.,.9,1.1)*wring*1.8;}
+if(WV.z>=0.&&WV.z<1.2){float wd=length(uv0-WV.xy);float wr=WV.z*.9;float wring=exp(-pow((wd-wr)*8.,2.))*(1.-WV.z/1.2);co+=vec3(1.,.9,1.1)*wring*.9;}
 co+=vec3(FL);co*=HUE;co+=(h(gl_FragCoord.xy+T)-.5)*.03;gl_FragColor=vec4(co,1.);}`
 function mk(t,s){const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);if(!gl.getShaderParameter(x,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(x));return x;}
 const pr=gl.createProgram();gl.attachShader(pr,mk(gl.VERTEX_SHADER,VS));gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);gl.useProgram(pr);
